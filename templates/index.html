@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Autism Detection</title>
+</head>
+<body>
+    <h1>Autism Detection using Facial Features</h1>
+    <video id="video" width="640" height="480" autoplay></video>
+    <button id="capture">Capture Photo</button>
+    <canvas id="canvas" width="640" height="480" style="display: none;"></canvas>
+    <p id="result"></p>
+
+    <h2>Upload an Image</h2>
+    <form id="uploadForm" enctype="multipart/form-data">
+        <input type="file" id="fileInput" name="file" accept="image/*">
+        <button type="submit">Upload Photo</button>
+    </form>
+
+    <script>
+        // Access the camera
+        const video = document.getElementById('video');
+        const canvas = document.getElementById('canvas');
+        const context = canvas.getContext('2d');
+        const captureButton = document.getElementById('capture');
+        const resultText = document.getElementById('result');
+        const uploadForm = document.getElementById('uploadForm');
+        const fileInput = document.getElementById('fileInput');
+
+        navigator.mediaDevices.getUserMedia({ video: true })
+            .then(stream => {
+                video.srcObject = stream;
+            });
+
+        captureButton.addEventListener('click', () => {
+            context.drawImage(video, 0, 0, canvas.width, canvas.height);
+            const dataURL = canvas.toDataURL('image/jpeg');
+            const base64Data = dataURL.split(',')[1];
+
+            fetch('/predict', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ image: base64Data }),
+            })
+            .then(response => response.json())
+            .then(data => {
+                resultText.textContent = `Result: ${data.result}`;
+            })
+            .catch(error => console.error('Error:', error));
+        });
+
+        uploadForm.addEventListener('submit', (event) => {
+            event.preventDefault();
+            const formData = new FormData();
+            formData.append('file', fileInput.files[0]);
+
+            fetch('/upload', {
+                method: 'POST',
+                body: formData,
+            })
+            .then(response => response.json())
+            .then(data => {
+                resultText.textContent = `Result: ${data.result}`;
+            })
+            .catch(error => console.error('Error:', error));
+        });
+    </script>
+</body>
+</html>
